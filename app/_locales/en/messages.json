@@ -1,0 +1,10 @@
+{
+  "appName": {
+    "message": "mavenlink-extras",
+    "description": "The name of the application"
+  },
+  "appDescription": {
+    "message": "Adds additional functionality to MavenLink",
+    "description": "The description of the application"
+  }
+}
