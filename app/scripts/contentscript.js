@@ -49,18 +49,39 @@ $.each( assignments, function(i, assig){
 		user_assignments[assignee_id] = {
 			full_name : assignee.full_name,
 			photo_path : assignee.photo_path,
-			weekly_assignments : []
+			assignments : [],
+			week_hours : {}
 		};
 	}
 
 	user_assignments[assignee_id].assignments.push(
 		{
 			workspace : story.workspace_id,
-			minutes : assig.allocated_minutes,
+			hours : Math.round(assig.allocated_minutes/60 * 100) / 100,
 			start_date : start_date,
 			due_date : due_date
 		}
 	);
+
+});
+
+$.each( user_assignments, function(i, ua){
+	//write one row per user
+
+	//sum and populate week_hours
+	$.each(ua.assignments, function(i, assig) {
+		var start_week = assig.start_date.getWeekNumber(),
+				due_week = assig.due_date.getWeekNumber();
+		console.log(assig, assig.start_date, assig.due_date )
+		for (var i = start_week; i < due_week+1; i++) {
+			if(!ua.week_hours[i]) {
+				ua.week_hours[i] = 0;
+			}
+			ua.week_hours[i] = ua.week_hours[i] + (assig.hours / (due_week - start_week + 1));
+			console.log(ua.week_hours[i])
+		}
+
+	});
 });
 
 //calculate how many hours in a given week per user
