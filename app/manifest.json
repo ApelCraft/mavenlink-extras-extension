@@ -1,8 +1,8 @@
 {
-    "name": "__MSG_appName__",
-    "version": "0.0.3",
+    "name": "mavenlink-extras",
+    "version": "0.0.5",
     "manifest_version": 2,
-    "description": "__MSG_appDescription__",
+    "description": "Adds additional functionality to app.mavenlink.com",
     "icons": {
         "16": "images/icon-16.png",
         "128": "images/icon-128.png"
@@ -11,9 +11,10 @@
     "background": {
         "scripts": [
             "scripts/background.js"
-        ]
+        ],
+        "persistent": false
     },
-    "browser_action": {
+    "page_action": {
         "default_icon": {
             "19": "images/icon-19.png",
             "38": "images/icon-38.png"
@@ -24,13 +25,14 @@
     "content_scripts": [
         {
             "matches": [
-                "http://*/*",
-                "https://*/*"
+                "http://app.mavenlink.com/*",
+                "https://app.mavenlink.com/*"
             ],
             "css": [
                 "styles/main.css"
             ],
             "js": [
+                "bower_components/jquery/src/jquery.js",
                 "scripts/contentscript.js"
             ],
             "run_at": "document_end",
