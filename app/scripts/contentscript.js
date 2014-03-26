@@ -25,7 +25,8 @@ $.getJSON(
 		users = json.users;
 		stories = json.stories;
 		assignments = json.assignments;
-		
+		build_user_assignments();
+		buildUI();
 	}
 );
 
@@ -38,67 +39,67 @@ function parseDate(date){
 }
 
 // create user_assignments map 
-$.each( assignments, function(i, assig){
-	var story =  stories[parseInt(assig.story_id,10)];
-	var assignee_id = parseInt(assig.assignee_id,10);
-	var assignee =  users[assignee_id];
-	var start_date = parseDate(story.start_date);
-	var due_date = parseDate(story.due_date);
+function build_user_assignments(){
+	$.each( assignments, function(i, assig){
+		var story =  stories[parseInt(assig.story_id,10)];
+		var assignee_id = parseInt(assig.assignee_id,10);
+		var assignee =  users[assignee_id];
+		var start_date = parseDate(story.start_date);
+		var due_date = parseDate(story.due_date);
 
-	if(!user_assignments[assignee_id]) {
-		user_assignments[assignee_id] = {
-			full_name : assignee.full_name,
-			photo_path : assignee.photo_path,
-			assignments : [],
-			week_hours : {}
-		};
-	}
-
-	user_assignments[assignee_id].assignments.push(
-		{
-			workspace : story.workspace_id,
-			hours : Math.round(assig.allocated_minutes/60 * 100) / 100,
-			start_date : start_date,
-			due_date : due_date
+		if(!user_assignments[assignee_id]) {
+			user_assignments[assignee_id] = {
+				full_name : assignee.full_name,
+				photo_path : assignee.photo_path,
+				assignments : [],
+				week_hours : {}
+			};
 		}
-	);
 
-});
-
-$.each( user_assignments, function(i, ua){
-	//write one row per user
-
-	//sum and populate week_hours
-	$.each(ua.assignments, function(i, assig) {
-		var start_week = assig.start_date.getWeekNumber(),
-				due_week = assig.due_date.getWeekNumber();
-		console.log(assig, assig.start_date, assig.due_date )
-		for (var i = start_week; i < due_week+1; i++) {
-			if(!ua.week_hours[i]) {
-				ua.week_hours[i] = 0;
+		user_assignments[assignee_id].assignments.push(
+			{
+				workspace : story.workspace_id,
+				hours : Math.round(assig.allocated_minutes/60 * 100) / 100,
+				start_date : start_date,
+				due_date : due_date
 			}
-			ua.week_hours[i] = ua.week_hours[i] + (assig.hours / (due_week - start_week + 1));
-			console.log(ua.week_hours[i])
-		}
+		);
 
 	});
-});
+}
 
-//calculate how many hours in a given week per user
+function buildUI(){
+	// #TODO start week on saturday instead of monday?
+	// UI shows next 6 weeks
+	var currentWeek = (new Date()).getWeekNumber();
+	var endWeek = 12 + currentWeek;
+	var resultHTML = '<table>'
 
+	$.each( user_assignments, function(i, ua){
+		//sum and populate week_hours
+		$.each(ua.assignments, function(i, assig) {
+			var start_week = assig.start_date ? assig.start_date.getWeekNumber() : (new Date()).getWeekNumber(), //where a task has already been started, the start date will null
+					due_week = assig.due_date.getWeekNumber();
+			for (var i = start_week; i < due_week+1; i++) {
+				if(!ua.week_hours[i]) {
+					ua.week_hours[i] = 0;
+				}
+				ua.week_hours[i] = ua.week_hours[i] + (assig.hours / (due_week - start_week + 1));
+			}
+		});
+		
+		//one row per user
+		resultHTML += '<tr>';
+		resultHTML += '<td>' + users[i].full_name + '</td>';
+		//one cell per week
+		for (var i = currentWeek; i < endWeek+1; i++) {
+			resultHTML += '<td>' + (ua.week_hours[i] || 0) + '</td>';
+		}
+		resultHTML += '</tr>';
+	});
 
-//make 8 buckets for the next 8 weeks
-//according to iso spec week starts on monday?
-	
-var currentWeek = (new Date()).getWeekNumber();
-var endWeek = 6 + currentWeek;
-
-//one row per user
-//one cell per week
+	resultHTML +='</table>';
+	$('body').append(resultHTML);	
+}
 
 $('.logo')[0].style.backgroundColor ='red';
-//$(user_assignments).each(k,v){
-//	make a new row for each user assignment
-//	go through all assignments	
-
-//}
