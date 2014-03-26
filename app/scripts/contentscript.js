@@ -103,8 +103,8 @@ function buildUI(){
 }
 function fetchData(page){
 	$.getJSON(
-		//need to figure out how to start with current week and potentially, limit to 8 weeks in future 
-		'https://app.mavenlink.com/api/v1/assignments.json?include=story,assignee&current=true&per_page=200&page='+page, //need to paginate when json.count is greater than 200
+		//need to figure out how to start with current week and potentially, limit to a # of weeks in future 
+		'https://app.mavenlink.com/api/v1/assignments.json?include=story,assignee&current=true&per_page=200&page='+page,
 		function(json) {
 			$.extend(users, json.users);
 			$.extend(stories, json.stories);
@@ -118,4 +118,6 @@ function fetchData(page){
 		}
 	);
 }
-fetchData(1);
+
+$('.navigation .left-nav-footer').append('<a href="#resource-allocation" id="me--fetch-trigger">Resource Allocation</a>');
+$('#me--fetch-trigger').on('click',function(){ fetchData(1); });
