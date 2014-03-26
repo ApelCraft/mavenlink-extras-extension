@@ -1,5 +1,23 @@
-/* Will be compiled down to a single stylesheet with your sass files */
-
-html {
-    /* Defaults css for cssmin process */
+.me__resource-table {
+	position: absolute;
+	z-index: 100000;
+	background-color: white;
+	top: 0;
 }
+.me__resource-table td, .me__resource-table th {
+	padding: 5px;
+}
+.me__resource-table th {
+	text-align: center;
+	white-space: nowrap;
+}
+.me__resource-table td .under-utilized {
+	background-color: yellow;
+}
+.me__resource-table td .over-utilized {
+	background-color: red;
+}
+.me__resource-table td .utilized {
+	background-color: green;
+}
+
