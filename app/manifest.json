@@ -3,7 +3,7 @@
     "version": "0.0.5",
     "manifest_version": 2,
     "description": "Adds additional functionality to app.mavenlink.com",
-    "icons": {
+"icons": {
         "16": "images/icon-16.png",
         "128": "images/icon-128.png"
     },
@@ -32,11 +32,13 @@
                 "styles/main.css"
             ],
             "js": [
-                "bower_components/jquery/src/jquery.js",
+                "bower_components/jquery/dist/jquery.min.js",
+                "bower_components/momentjs/min/moment.min.js",
                 "scripts/contentscript.js"
             ],
             "run_at": "document_end",
             "all_frames": false
         }
-    ]
+    ],
+    "web_accessible_resources": ["bower_components/jquery/dist/jquery.min.map"]
 }
