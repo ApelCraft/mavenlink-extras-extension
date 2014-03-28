@@ -3,7 +3,8 @@
 var users = {},
 		stories = {},
 		assignments = {},
-		user_assignments = {};
+		user_assignments = {},
+		currentMoment = moment();
 
 // create user_assignments map 
 function build_user_assignments(){
@@ -30,30 +31,9 @@ function build_user_assignments(){
 				title: story.title,
 			}
 		);
-
 	});
-}
-
-function buildUI(){
-	var futureWeekCount = 12,
-			currentMoment = moment(),
-			resultHTML = '';
-
-	function utilizationClass(hours){
-		return (hours < 38 ? 'under-utilized' : (hours > 42 ? 'over-utilized' : 'utilized') );
-	}
-
-	resultHTML += '<table class="me__resource-table"><tr><th>People</th>';
-	for (var i = 0; i < futureWeekCount; i++) {
-		var m = currentMoment.clone().add(i,"weeks");
-		resultHTML += '<th>WK ' + m.week() + ' ' + m.day(0).format('MM/DD') + '</th>';
-	}
-	resultHTML += '</tr>';
-
-
-
+	//#TODO shoultdn't have to go through this array again...
 	$.each( user_assignments, function(i, ua){
-		var assignmentHTML = '<ul>';
 		//sum and populate weekly map	
 		$.each(ua.assignments, function(i, assig) {
 			//#TODO find out why due date is null sometimes
@@ -76,21 +56,33 @@ function buildUI(){
 				if(!weekly.workspace[assig.workspace]) {
 					weekly.workspace[assig.workspace] = {
 						assignments : []
-					}
+					};
 				}
-
 				// sum hours (split by duration if needed)
 				weekly.hours += (assig.hours / weeksCount);
-
 				// push onto list of a workspace's assignments
 				weekly.workspace[assig.workspace].assignments.push(i);
-
 			}
-			//assignmentHTML += '<li>' + assig.workspace + ', ' + assig.title + ', ' + start.format('MM/DD') + ' - ' + due.format('MM/DD') + '</li>';
-
 		});
-		//assignmentHTML += '</ul>';
+	});
+}
 
+function buildUI(){
+	var futureWeekCount = 12,
+			resultHTML = '';
+
+	function utilizationClass(hours){
+		return (hours < 38 ? 'under-utilized' : (hours > 42 ? 'over-utilized' : 'utilized') );
+	}
+
+	resultHTML += '<table class="me__resource-table"><tr><th>People</th>';
+	for (var i = 0; i < futureWeekCount; i++) {
+		var m = currentMoment.clone().add(i,"weeks");
+		resultHTML += '<th>WK ' + m.week() + ' ' + m.day(0).format('MM/DD') + '</th>';
+	}
+	resultHTML += '</tr>';
+
+	$.each( user_assignments, function(i, ua){
 		//one row per user
 		resultHTML += '<tr>';
 		resultHTML += '<td data-uid="'+i+'">' + users[i].full_name + '</td>';
@@ -101,7 +93,8 @@ function buildUI(){
 			resultHTML += '<td><div class="'+ utilizationClass(roundedHours) +'">' + roundedHours + '</td>';
 		}
 		resultHTML += '</tr>' +
-			'<tr><td colspan="13">'+assignmentHTML+'</td></tr>';
+			//assignmentHTML += '<li>' + assig.workspace + ', ' + assig.title + ', ' + start.format('MM/DD') + ' - ' + due.format('MM/DD') + '</li>';
+			'<tr><td colspan="13">'+''+'</td></tr>';
 	});
 
 	resultHTML +='</table>';
