@@ -35,10 +35,10 @@ function build_user_assignments(){
 }
 
 function buildUI(){
-	// #TODO start week on saturday instead of monday?
 	// UI shows next 6 weeks
-	var currentWeek = moment().week();
-	var endWeek = 12 + currentWeek; //#todo account for when week wraps around the new year
+	var futureWeekCount = 12;
+	var currentMoment = moment();
+	var futureMoment = currentMoment.add(futureWeekCount, 'weeks');
 	var resultHTML = '';
 
 	function utilizationClass(hours){
@@ -46,8 +46,8 @@ function buildUI(){
 	}
 
 	resultHTML += '<table class="me__resource-table"><tr><th>People</th>';
-	for (var i = currentWeek; i < endWeek+1; i++) {  //#todo account for when week wraps around the new year
-		var m = moment().year(2014).week(i); //#TODO need to use a real year hear
+	for (var i = 0; i < futureWeekCount; i++) {
+		var m = currentMoment.add(i,"weeks");
 		resultHTML += '<th>WK ' + i + ' ' + m.day(0).format('MM/DD') + '</th>';
 	}
 	resultHTML += '</tr>';
@@ -61,16 +61,20 @@ function buildUI(){
 			//#TODO find out why these are null sometimes
 			if (!assig.start_date || !assig.due_date){ return;}
 
-			var start_week = assig.start_date ? moment(assig.start_date).week() : currentWeek, //where a task has already been started, the start date will null
-					due_week = moment(assig.due_date).week();
-			for (var i = start_week; i < due_week+1; i++) { //#todo account for when week wraps around the new year
+			var start = assig.start_date ? moment(assig.start_date) : currentMoment, //where a task has already been started, the start date will null
+					due = moment(assig.due_date),
+					weeksCount = start.diff(due, 'weeks');
+
+			for (var i = 0; i < weeksCount; i++) { //#todo account for when week wraps around the new year
 				// create if it doesn't exist
-				if(!ua.week_hours[i]) { ua.week_hours[i] = 0; }
-				ua.week_hours[i] += (assig.hours / (due_week - start_week + 1));
+				var m = start.add(i,"weeks");
+				if(!ua.week_hours[m.week()]) { ua.week_hours[m.week()] = 0; }
+
+				ua.week_hours[m.week()] += (assig.hours / weeksCount);
 			}
-			// if(assig.due_date > getDateOfWeek(currentWeek, (new Date()).getYear) ){
-			// 	assignmentHTML += '<li>' + assig.workspace + ', ' + assig.title + ', ' + assig.start_date + ' - ' + assig.due_date + '</li>';
-			// }
+			if( !due.isBefore(currentMoment) ){
+				assignmentHTML += '<li>' + assig.workspace + ', ' + assig.title + ', ' + start.format('MM/DD') + ' - ' + due.format('MM/DD') + '</li>';
+			}
 
 		});
 		assignmentHTML += '</ul>';
@@ -79,7 +83,7 @@ function buildUI(){
 		resultHTML += '<tr>';
 		resultHTML += '<td data-uid="'+i+'">' + users[i].full_name + '</td>';
 		//one cell per week
-		for (var i = currentWeek; i < endWeek+1; i++) {//#todo account for when week wraps around the new year (if due is less than start)
+		for (var i = 0; i < futureWeekCount; i++) {
 			var roundedHours = Math.round((ua.week_hours[i] || 0)*10)/10;
 			resultHTML += '<td><div class="'+ utilizationClass(roundedHours) +'">' + roundedHours + '</td>';
 		}
