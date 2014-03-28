@@ -17,7 +17,7 @@ function build_user_assignments(){
 				full_name : assignee.full_name,
 				photo_path : assignee.photo_path,
 				assignments : [],
-				week_hours : {}
+				weekly : {}
 			};
 		}
 		// fill up the assignments array
@@ -25,8 +25,8 @@ function build_user_assignments(){
 			{
 				workspace : story.workspace_id,
 				hours : assig.allocated_minutes/60,
-				start_date : Date.parse(story.start_date+'T08:00:00'),
-				due_date : Date.parse(story.due_date+'T08:00:00'),
+				start_date : story.start_date ? moment(story.start_date).toDate() : null, //moment parse is needed to prevent date format YYYY-MM-DD from being parsed as UTC
+				due_date : story.due_date ? moment(story.due_date).toDate() : null,
 				title: story.title,
 			}
 		);
@@ -35,11 +35,9 @@ function build_user_assignments(){
 }
 
 function buildUI(){
-	// UI shows next 6 weeks
-	var futureWeekCount = 12;
-	var currentMoment = moment();
-	var futureMoment = currentMoment.add(futureWeekCount, 'weeks');
-	var resultHTML = '';
+	var futureWeekCount = 12,
+			currentMoment = moment(),
+			resultHTML = '';
 
 	function utilizationClass(hours){
 		return (hours < 38 ? 'under-utilized' : (hours > 42 ? 'over-utilized' : 'utilized') );
@@ -47,8 +45,8 @@ function buildUI(){
 
 	resultHTML += '<table class="me__resource-table"><tr><th>People</th>';
 	for (var i = 0; i < futureWeekCount; i++) {
-		var m = currentMoment.add(i,"weeks");
-		resultHTML += '<th>WK ' + i + ' ' + m.day(0).format('MM/DD') + '</th>';
+		var m = currentMoment.clone().add(i,"weeks");
+		resultHTML += '<th>WK ' + m.week() + ' ' + m.day(0).format('MM/DD') + '</th>';
 	}
 	resultHTML += '</tr>';
 
@@ -56,35 +54,50 @@ function buildUI(){
 
 	$.each( user_assignments, function(i, ua){
 		var assignmentHTML = '<ul>';
-		//sum and populate week_hours	
+		//sum and populate weekly map	
 		$.each(ua.assignments, function(i, assig) {
-			//#TODO find out why these are null sometimes
-			if (!assig.start_date || !assig.due_date){ return;}
-
-			var start = assig.start_date ? moment(assig.start_date) : currentMoment, //where a task has already been started, the start date will null
+			//#TODO find out why due date is null sometimes
+			if ( !assig.due_date || moment(assig.due_date).isBefore(currentMoment) ){ return;}
+			var start = assig.start_date ? moment(assig.start_date) : currentMoment, //where a task has already been started, the start date will be null
 					due = moment(assig.due_date),
-					weeksCount = start.diff(due, 'weeks');
+					weeksCount = start.diff(due, 'weeks')+1;
 
-			for (var i = 0; i < weeksCount; i++) { //#todo account for when week wraps around the new year
-				// create if it doesn't exist
-				var m = start.add(i,"weeks");
-				if(!ua.week_hours[m.week()]) { ua.week_hours[m.week()] = 0; }
+			for (var i = 0; i < weeksCount; i++) {
+				var m = start.clone().add(i,'weeks');
+				// create week_assigments key if it doesn't exist
+				if(!ua.weekly[m.week()]) {
+					ua.weekly[m.week()] = {
+						hours: 0,
+						workspace : {}
+					};
+				}
+				var weekly = ua.weekly[m.week()];
+				// create workspace key if it doesn't exist
+				if(!weekly.workspace[assig.workspace]) {
+					weekly.workspace[assig.workspace] = {
+						assignments : []
+					}
+				}
 
-				ua.week_hours[m.week()] += (assig.hours / weeksCount);
+				// sum hours (split by duration if needed)
+				weekly.hours += (assig.hours / weeksCount);
+
+				// push onto list of a workspace's assignments
+				weekly.workspace[assig.workspace].assignments.push(i);
+
 			}
-			if( !due.isBefore(currentMoment) ){
-				assignmentHTML += '<li>' + assig.workspace + ', ' + assig.title + ', ' + start.format('MM/DD') + ' - ' + due.format('MM/DD') + '</li>';
-			}
+			//assignmentHTML += '<li>' + assig.workspace + ', ' + assig.title + ', ' + start.format('MM/DD') + ' - ' + due.format('MM/DD') + '</li>';
 
 		});
-		assignmentHTML += '</ul>';
+		//assignmentHTML += '</ul>';
 
 		//one row per user
 		resultHTML += '<tr>';
 		resultHTML += '<td data-uid="'+i+'">' + users[i].full_name + '</td>';
 		//one cell per week
 		for (var i = 0; i < futureWeekCount; i++) {
-			var roundedHours = Math.round((ua.week_hours[i] || 0)*10)/10;
+			var m = currentMoment.clone().add(i,'weeks');
+			var roundedHours = ua.weekly[ m.week() ] ? Math.round((ua.weekly[ m.week() ].hours || 0)*10)/10 : 0;
 			resultHTML += '<td><div class="'+ utilizationClass(roundedHours) +'">' + roundedHours + '</td>';
 		}
 		resultHTML += '</tr>' +
@@ -110,6 +123,7 @@ function fetchData(page){
 			} else {
 				build_user_assignments();
 				buildUI();
+				console.log(user_assignments)
 			}
 		}
 	);
