@@ -18,7 +18,8 @@ function build_user_assignments(){
 				full_name : assignee.full_name,
 				photo_path : assignee.photo_path,
 				assignments : [],
-				weekly : {}
+				weekly : {},
+				workspace_weekly_assignments : {}
 			};
 		}
 		// fill up the assignments array
@@ -33,35 +34,42 @@ function build_user_assignments(){
 		);
 	});
 	//#TODO shoultdn't have to go through this array again...
-	$.each( user_assignments, function(i, ua){
+	$.each( user_assignments, function(ua_key, ua){
 		//sum and populate weekly map	
-		$.each(ua.assignments, function(i, assig) {
+		$.each(ua.assignments, function(assig_key, assig) {
 			//#TODO find out why due date is null sometimes
 			if ( !assig.due_date || moment(assig.due_date).isBefore(currentMoment) ){ return;}
 			var start = assig.start_date ? moment(assig.start_date) : currentMoment, //where a task has already been started, the start date will be null
 					due = moment(assig.due_date),
 					weeksCount = start.diff(due, 'weeks')+1;
 
+			// create workspace_weekly_hours key if it doesn't exist
+			var wwh = ua.workspace_weekly_assignments[assig.workspace];
+			if(!wwh) {
+				wwh = ua.workspace_weekly_assignments[assig.workspace] = {};
+			}
+
+			//loop through week duration of assignment
 			for (var i = 0; i < weeksCount; i++) {
 				var m = start.clone().add(i,'weeks');
-				// create week_assigments key if it doesn't exist
-				if(!ua.weekly[m.week()]) {
-					ua.weekly[m.week()] = {
-						hours: 0,
-						workspace : {}
-					};
-				}
+				// create weekly key if it doesn't exist
 				var weekly = ua.weekly[m.week()];
-				// create workspace key if it doesn't exist
-				if(!weekly.workspace[assig.workspace]) {
-					weekly.workspace[assig.workspace] = {
-						assignments : []
+				if(!weekly) {
+					weekly = ua.weekly[m.week()] = {
+						hours: 0
 					};
 				}
 				// sum hours (split by duration if needed)
 				weekly.hours += (assig.hours / weeksCount);
-				// push onto list of a workspace's assignments
-				weekly.workspace[assig.workspace].assignments.push(i);
+
+				if(!wwh[m.week()]){
+					wwh[m.week()] = {
+						hours : 0
+					};
+				}
+
+				wwh[m.week()].hours += (assig.hours / weeksCount);
+
 			}
 		});
 	});
@@ -77,24 +85,50 @@ function buildUI(){
 
 	resultHTML += '<table class="me__resource-table"><tr><th>People</th>';
 	for (var i = 0; i < futureWeekCount; i++) {
-		var m = currentMoment.clone().add(i,"weeks");
+		var m = currentMoment.clone().add(i,'weeks');
 		resultHTML += '<th>WK ' + m.week() + ' ' + m.day(0).format('MM/DD') + '</th>';
 	}
 	resultHTML += '</tr>';
 
-	$.each( user_assignments, function(i, ua){
+	$.each( user_assignments, function(ua_key, ua){
 		//one row per user
-		resultHTML += '<tr>';
-		resultHTML += '<td data-uid="'+i+'">' + users[i].full_name + '</td>';
 		//one cell per week
+		var hourSumCells = '';
 		for (var i = 0; i < futureWeekCount; i++) {
 			var m = currentMoment.clone().add(i,'weeks');
 			var roundedHours = ua.weekly[ m.week() ] ? Math.round((ua.weekly[ m.week() ].hours || 0)*10)/10 : 0;
-			resultHTML += '<td><div class="'+ utilizationClass(roundedHours) +'">' + roundedHours + '</td>';
+			hourSumCells += '<td><div class="'+ utilizationClass(roundedHours) +'">' + roundedHours + '</td>';
+			//var workspaceHourCells += '<td><div class="'+ utilizationClass(roundedHours) +'">' + roundedHours + '</td>';
 		}
-		resultHTML += '</tr>' +
-			//assignmentHTML += '<li>' + assig.workspace + ', ' + assig.title + ', ' + start.format('MM/DD') + ' - ' + due.format('MM/DD') + '</li>';
-			'<tr><td colspan="13">'+''+'</td></tr>';
+		//one row per project
+		//one cell per week per project
+
+		//one row per project assigment
+		//assignmentHTML += '<li>' + assig.workspace + ', ' + assig.title + ', ' + start.format('MM/DD') + ' - ' + due.format('MM/DD') + '</li>';
+		var projectRows = '';
+		$.each( ua.workspace_weekly_assignments, function(wwa_key, wwa){
+			var projectCells = '';
+
+			// #TODO consolidate with week loop with  the previous one
+			for (var i = 0; i < futureWeekCount; i++) {
+				var m = currentMoment.clone().add(i,'weeks');
+				var roundedHours = wwa[ m.week() ] ? Math.round((wwa[ m.week() ].hours || 0)*10)/10 : 0;
+				projectCells += '<td>' + roundedHours + '</td>';
+			}
+
+			projectRows +=
+				'<tr>' +
+					'<td data-uid="'+i+'">' + wwa_key + '</td>' +
+					projectCells +
+				'</tr>';
+		});
+
+		resultHTML +=
+			'<tr>' +
+				'<td data-uid="'+i+'">' + users[ua_key].full_name + '</td>' +
+				hourSumCells +
+			'</tr>'+
+			projectRows;
 	});
 
 	resultHTML +='</table>';
