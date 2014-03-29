@@ -2,6 +2,7 @@
 
 var users = {},
 		stories = {},
+		workspaces = {},
 		assignments = {},
 		user_assignments = {},
 		currentMoment = moment();
@@ -30,6 +31,7 @@ function build_user_assignments(){
 				start_date : story.start_date ? moment(story.start_date).toDate() : null, //moment parse is needed to prevent date format YYYY-MM-DD from being parsed as UTC
 				due_date : story.due_date ? moment(story.due_date).toDate() : null,
 				title: story.title,
+				id: parseInt(story.id)
 			}
 		);
 	});
@@ -64,18 +66,24 @@ function build_user_assignments(){
 
 				if(!wwh[m.week()]){
 					wwh[m.week()] = {
-						hours : 0
+						hours : 0,
+						assignments : {}
 					};
 				}
-
 				wwh[m.week()].hours += (assig.hours / weeksCount);
+
+				if(!wwh[m.week()].assignments[assig_key]){
+					wwh[m.week()].assignments[assig.id] = {
+						hours : assig.hours
+					};
+				}
 
 			}
 		});
 	});
 }
 
-function buildUI(){
+function buildView() {
 	var futureWeekCount = 12,
 			resultHTML = '';
 
@@ -90,6 +98,14 @@ function buildUI(){
 	}
 	resultHTML += '</tr>';
 
+	function assignmentList(assigs){
+		var html = '';
+		$.each(assigs, function(k,v){
+			html += '<br/>'+ stories[k].title;
+		});
+		return html;
+	}
+
 	$.each( user_assignments, function(ua_key, ua){
 		//one row per user
 		//one cell per week
@@ -100,27 +116,29 @@ function buildUI(){
 			hourSumCells += '<td><div class="'+ utilizationClass(roundedHours) +'">' + roundedHours + '</td>';
 			//var workspaceHourCells += '<td><div class="'+ utilizationClass(roundedHours) +'">' + roundedHours + '</td>';
 		}
+
 		//one row per project
 		//one cell per week per project
-
 		//one row per project assigment
 		//assignmentHTML += '<li>' + assig.workspace + ', ' + assig.title + ', ' + start.format('MM/DD') + ' - ' + due.format('MM/DD') + '</li>';
 		var projectRows = '';
 		$.each( ua.workspace_weekly_assignments, function(wwa_key, wwa){
+			
 			var projectCells = '';
 
-			// #TODO consolidate with week loop with  the previous one
+			// #TODO consolidate this week loop with the previous one
 			for (var i = 0; i < futureWeekCount; i++) {
 				var m = currentMoment.clone().add(i,'weeks');
 				var roundedHours = wwa[ m.week() ] ? Math.round((wwa[ m.week() ].hours || 0)*10)/10 : 0;
-				projectCells += '<td>' + roundedHours + '</td>';
+				projectCells += '<td>' + roundedHours + (wwa[ m.week() ] ? assignmentList(wwa[ m.week() ].assignments) : '') + '</td>';
 			}
 
 			projectRows +=
 				'<tr>' +
-					'<td data-uid="'+i+'">' + wwa_key + '</td>' +
+					'<td data-wid="'+wwa_key+'">' + workspaces[wwa_key].title + '</td>' +
 					projectCells +
 				'</tr>';
+
 		});
 
 		resultHTML +=
@@ -135,25 +153,55 @@ function buildUI(){
 	$('body').append(resultHTML);
 }
 
-function fetchData(page){
-	page = page || 1;
-	$.getJSON(
-		//need to figure out how to start with current week and potentially, limit to a # of weeks in future. 
-		//Right now it just gets everything except archived projects
-		'https://app.mavenlink.com/api/v1/assignments.json?include=story,assignee&current=true&per_page=200&page='+page,
-		function(json) {
-			$.extend(users, json.users);
-			$.extend(stories, json.stories);
-			$.extend(assignments, json.assignments);
-			if(json.count && json.count > page * 200){
-				fetchData(page+1);
-			} else {
-				build_user_assignments();
-				buildUI();
-				console.log(user_assignments)
+function fetchData(){
+	var workspacesComplete = false;
+	function fetchWorkspaces(page){
+		page = page || 1;
+		$.getJSON(
+			'https://app.mavenlink.com/api/v1/workspaces.json?&per_page=200&page='+page,
+			function(json) {
+				$.extend(workspaces, json.workspaces);
+				if(json.count && json.count > page * 200){
+					fetchWorkspaces(page+1);
+				} else {
+					workspacesComplete = true;
+					initView();
+				}
 			}
+		);
+	}
+
+	var assignmentsComplete = false;
+	function fetchAssignments(page){
+		page = page || 1;
+		$.getJSON(
+			//need to figure out how to start with current week and potentially, limit to a # of weeks in future. 
+			//Right now it just gets everything except archived projects
+			'https://app.mavenlink.com/api/v1/assignments.json?include=story,assignee&current=true&per_page=200&page='+page,
+			function(json) {
+				$.extend(users, json.users);
+				$.extend(stories, json.stories);
+				$.extend(assignments, json.assignments);
+				if(json.count && json.count > page * 200){
+					fetchAssignments(page+1);
+				} else {
+					build_user_assignments();
+					assignmentsComplete = true;
+					initView();
+					console.log(user_assignments);
+				}
+			}
+		);
+	}
+
+	function initView(){
+		if(assignmentsComplete && workspacesComplete){
+			buildView();
 		}
-	);
+	}
+
+	fetchWorkspaces();
+	fetchAssignments();
 }
 
 $('.navigation .left-nav-footer').append('<a href="#resource-allocation" id="me--fetch-trigger">Resource Allocation</a>');
