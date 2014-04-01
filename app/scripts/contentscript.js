@@ -124,33 +124,41 @@ function buildView() {
 				}
 
 				assignmentRows +=
-					'<tr class="assignment-row">' +
-						'<td data-assignmentid="'+assig_key+'">' + assig.title + ' (' + assig.hours + ' total hours)</td>' +
-						assignmentHoursCells +
-					'</tr>';
+						'<tr class="assignment-row '+workspace_key+'">' +
+							'<td class="" title="' + assig.hours + ' total hours" data-assignmentid="'+assig_key+'">' + assig.title + '</td>' +
+							assignmentHoursCells +
+						'</tr>';
 			});
 
 			workspaceRows +=
-				'<tr class="workspace-row">' +
-					'<td data-workspaceid="'+workspace_key+'" colspan="'+futureWeekCount+'">' + Workspaces[workspace_key].title + '</td>' +
+				'<tr class="workspace-row '+ua_key+'">' +
+					'<td class="trigger" data-workspaceid="'+workspace_key+'">' + Workspaces[workspace_key].title + '<div class="triangle"></div></td>' +
+					'<td colspan="'+(futureWeekCount-1)+'"></td>' +
 				'</tr>' +
 				assignmentRows;
 
 		});
 
 		resultHTML +=
-			'<tr  class="user-row">' +
-				'<td data-userid="'+i+'">' + Users[ua_key].full_name + '</td>' +
-				hourSumCells +
-			'</tr>'+
-			workspaceRows;
+			'<tbody>' +
+				'<tr  class="user-row">' +
+					'<td class="trigger" data-userid="'+ua_key+'">' + Users[ua_key].full_name + '<div class="triangle"></div></td>' +
+					hourSumCells +
+				'</tr>'+
+					workspaceRows +
+			'</tbody>';
 	});
 
 	
 	$('body').append(
-		'<table class="me__resource-table">' +
-			resultHTML +
-		'</table>'
+		'<div class="me__resource">'+
+			'<div class="me__resource-wrap">'+
+				'<div class="close">&otimes;</div>' +
+				'<table class="me__resource-table">' +
+					resultHTML +
+				'</table>' +
+			'</div>' +
+		'</div>'
 	);
 }
 
@@ -199,6 +207,30 @@ function fetchData(){
 	function initView(){
 		if(assignmentsComplete && workspacesComplete){
 			buildView();
+
+			$('tr.user-row .trigger').on('click', function(){
+				var $this = $(this);
+				$this.toggleClass('open');
+				$(this).parents('tbody').find('tr.workspace-row').toggle();
+
+				// unfortunate - need to close assignments if user row is collapsed before workspace row
+				if( !$this.hasClass('open') ){
+					$this.parents('tbody').find( 'tr.assignment-row' ).hide();
+					$this.parents('tbody').find('.open').removeClass('open');
+				}
+			});
+
+			$('tr.workspace-row .trigger').on('click', function(){
+				var wid =  $(this).data('workspaceid'),
+						$this = $(this);
+				$this.toggleClass('open');
+				$this.parents('tbody').find( 'tr.assignment-row.' + wid ).toggle();
+			});
+
+			$('.me__resource-wrap .close').on('click',function(){
+				$('.me__resource').hide();
+			});
+
 			$(document).trigger('viewComplete');
 		}
 	}
@@ -207,11 +239,18 @@ function fetchData(){
 	fetchAssignments();
 }
 
-$('.navigation .left-nav-footer').append('<a href="#resource-allocation" id="me--fetch-trigger">Resource Allocation</a>');
-$('#me--fetch-trigger').on('click',function(){
-	if(!$.isEmptyObject(user_assignments)){ return; }
-	var $this = $(this);
-	var origText = $this.text();
+$('.navigation .left-nav-footer').append(
+	'<a href="#resource-allocation" id="me--fetch-trigger" style="text-align: center;display: block;">Resource Allocation</a>'
+);
+$('#me--fetch-trigger').on('click',function(e){
+	e.preventDefault();
+	if( $('.me__resource')[0] ){
+		$('.me__resource').show();
+		return;
+	}
+	var $this = $(this),
+			origText = $this.text();
+
 	$this.text('loading...');
 	fetchData();
 	$(document).on('viewComplete', function(){
