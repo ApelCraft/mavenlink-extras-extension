@@ -40,7 +40,7 @@ function build_user_assignments(){
 		// fill up the assignments map
 		$.extend(user_assignments[assignee_id].assignments, tmp_assig);
 
-		// fill up the workspaces map
+		// fill up the user_assignments.workspaces map
 		if(!user_assignments[assignee_id].workspaces[workspace_id]){
 			user_assignments[assignee_id].workspaces[workspace_id] = {
 				title  : Workspaces[workspace_id].title,
@@ -48,7 +48,7 @@ function build_user_assignments(){
 			};
 		}
 		
-		// fill up the workspaces.assigments map
+		// fill up the user_assignments.workspaces.assigments map
 		if( !user_assignments[assignee_id].workspaces[workspace_id].assignments[story_id] ){
 			user_assignments[assignee_id].workspaces[workspace_id].assignments[story_id] = {
 				hours : assig_hours,
@@ -90,7 +90,7 @@ function buildView() {
 		return (hours < 38 ? 'under-utilized' : (hours > 42 ? 'over-utilized' : 'utilized') );
 	}
 
-	resultHTML += '<table class="me__resource-table"><tr><th>People</th>';
+	resultHTML += '<tr><th>People</th>';
 	for (var i = 0; i < futureWeekCount; i++) {
 		var m = currentMoment.clone().add(i,'weeks');
 		resultHTML += '<th>WK-' + m.week() + ' ' + m.day(0).format('MM/DD') + '</th>';
@@ -125,7 +125,7 @@ function buildView() {
 
 				assignmentRows +=
 					'<tr class="assignment-row">' +
-						'<td data-assignmentid="'+assig_key+'">' + assig.title + ' - ' + assig.hours + '</td>' +
+						'<td data-assignmentid="'+assig_key+'">' + assig.title + ' (' + assig.hours + ' total hours)</td>' +
 						assignmentHoursCells +
 					'</tr>';
 			});
@@ -140,18 +140,23 @@ function buildView() {
 
 		resultHTML +=
 			'<tr  class="user-row">' +
-				'<td data-uid="'+i+'">' + Users[ua_key].full_name + '</td>' +
+				'<td data-userid="'+i+'">' + Users[ua_key].full_name + '</td>' +
 				hourSumCells +
 			'</tr>'+
 			workspaceRows;
 	});
 
-	resultHTML +='</table>';
-	$('body').append(resultHTML);
+	
+	$('body').append(
+		'<table class="me__resource-table">' +
+			resultHTML +
+		'</table>'
+	);
 }
 
 function fetchData(){
 	var workspacesComplete = false;
+
 	function fetchWorkspaces(page){
 		page = page || 1;
 		$.getJSON(
@@ -185,7 +190,7 @@ function fetchData(){
 					build_user_assignments();
 					assignmentsComplete = true;
 					initView();
-					console.log(user_assignments);
+					//console.log(user_assignments);
 				}
 			}
 		);
@@ -194,6 +199,7 @@ function fetchData(){
 	function initView(){
 		if(assignmentsComplete && workspacesComplete){
 			buildView();
+			$(document).trigger('viewComplete');
 		}
 	}
 
@@ -202,4 +208,13 @@ function fetchData(){
 }
 
 $('.navigation .left-nav-footer').append('<a href="#resource-allocation" id="me--fetch-trigger">Resource Allocation</a>');
-$('#me--fetch-trigger').on('click',function(){ fetchData(); });
+$('#me--fetch-trigger').on('click',function(){
+	if(!$.isEmptyObject(user_assignments)){ return; }
+	var $this = $(this);
+	var origText = $this.text();
+	$this.text('loading...');
+	fetchData();
+	$(document).on('viewComplete', function(){
+		$this.text(origText);
+	});
+});

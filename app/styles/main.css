@@ -20,4 +20,13 @@
 .me__resource-table td .utilized {
 	background-color: green;
 }
-
+.me__resource-table .user-row td:first-child{
+	font-weight: bold;
+}
+.me__resource-table .workspace-row td:first-child{
+	font-weight: bold;
+	padding-left: 20px;
+}
+.me__resource-table .assignment-row td:first-child{
+	padding-left: 40px;
+}
