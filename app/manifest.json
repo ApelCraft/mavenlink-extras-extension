@@ -1,6 +1,6 @@
 {
     "name": "mavenlink-extras",
-    "version": "0.0.6",
+    "version": "0.0.8",
     "manifest_version": 2,
     "description": "Adds additional functionality to app.mavenlink.com",
     "icons": {
