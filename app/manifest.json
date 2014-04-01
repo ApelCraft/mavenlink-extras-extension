@@ -1,9 +1,9 @@
 {
     "name": "mavenlink-extras",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "manifest_version": 2,
     "description": "Adds additional functionality to app.mavenlink.com",
-"icons": {
+    "icons": {
         "16": "images/icon-16.png",
         "128": "images/icon-128.png"
     },
@@ -40,5 +40,7 @@
             "all_frames": false
         }
     ],
-    "web_accessible_resources": ["bower_components/jquery/dist/jquery.min.map"]
+    "web_accessible_resources": [
+        "bower_components/jquery/dist/jquery.min.map"
+    ]
 }
