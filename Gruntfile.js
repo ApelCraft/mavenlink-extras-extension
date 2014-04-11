@@ -166,7 +166,7 @@ module.exports = function (grunt) {
                     dest: '<%= yeoman.dist %>',
                     src: [
                         '*.{ico,png,txt}',
-                        'images/{,*/}*.{webp,gif,png}',
+                        'images/{,*/}*.{webp,gif}',
                         '_locales/{,*/}*.json'
                     ]
                 }, {
@@ -221,6 +221,7 @@ module.exports = function (grunt) {
         'uglify',
         'copy',
         'usemin',
+        'imagemin',
         'compress'
     ]);
 

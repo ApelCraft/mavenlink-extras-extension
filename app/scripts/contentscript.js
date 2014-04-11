@@ -4,21 +4,22 @@ var Users = {},
 		Stories = {},
 		Workspaces = {},
 		Assignments = {},
+		AllocationDays = {},
 		user_assignments = {},
-		currentMoment = moment();
+		currentMoment = moment(),
+		futureWeekCount = 12;
 
 // create user_assignments map 
 function build_user_assignments(){
-	$.each( Assignments, function(assig_key, assig){
-		var story_id = parseInt(assig.story_id,10),
+	$.each( AllocationDays, function(alloc_day_key, allocation_day){
+		var story_id = parseInt(allocation_day.story_id,10),
 				story =  Stories[story_id],
-				assignee_id = parseInt(assig.assignee_id,10),
+				assignment_id = allocation_day.assignment_id,
+				assignment = Assignments[parseInt(assignment_id,10)],
+				assignee_id = parseInt(assignment.assignee_id,10),
 				assignee =  Users[assignee_id],
 				workspace_id = parseInt(story.workspace_id,10),
-				assig_hours = assig.allocated_minutes/60;
-
-		// bail if the assignment is complete or from a previous week
-		if ( !story.due_date || !moment(story.due_date).isValid() || moment(story.due_date).day(0).isBefore(currentMoment) ){ return;}
+				hours = parseInt(allocation_day.minutes,10)/60;
 
 		if(!user_assignments[assignee_id]) {
 			user_assignments[assignee_id] = {
@@ -26,19 +27,10 @@ function build_user_assignments(){
 				photo_path : assignee.photo_path,
 				assignments : {},
 				workspaces : {},
+				allocation_days : {},
 				weekly_hours : {}
 			};
 		}
-		var tmp_assig = {};
-		tmp_assig[story_id] = {
-				workspace_id : workspace_id,
-				hours : assig.allocated_minutes/60,
-				start_date : story.start_date ? moment(story.start_date).toDate() : null, //moment parse is needed to prevent date format YYYY-MM-DD from being parsed as UTC
-				due_date : story.due_date ? moment(story.due_date).toDate() : null,
-				title: story.title
-			};
-		// fill up the assignments map
-		$.extend(user_assignments[assignee_id].assignments, tmp_assig);
 
 		// fill up the user_assignments.workspaces map
 		if(!user_assignments[assignee_id].workspaces[workspace_id]){
@@ -49,9 +41,10 @@ function build_user_assignments(){
 		}
 		
 		// fill up the user_assignments.workspaces.assigments map
-		if( !user_assignments[assignee_id].workspaces[workspace_id].assignments[story_id] ){
-			user_assignments[assignee_id].workspaces[workspace_id].assignments[story_id] = {
-				hours : assig_hours,
+		var user_workspace_assignment = user_assignments[assignee_id].workspaces[workspace_id].assignments[story_id];
+		if( !user_workspace_assignment ){
+			user_workspace_assignment = user_assignments[assignee_id].workspaces[workspace_id].assignments[story_id] = {
+				hours : assignment.allocated_minutes/60,
 				weekly_hours : {},
 				start_date : story.start_date ? moment(story.start_date).toDate() : null, //moment parse is needed to prevent date format YYYY-MM-DD from being parsed as UTC
 				due_date : story.due_date ? moment(story.due_date).toDate() : null,
@@ -59,32 +52,28 @@ function build_user_assignments(){
 			};
 		}
 		
-		var start = story.start_date ? moment(story.start_date) : currentMoment, //where a task has already been started, the start date will be null
-				due = moment(story.due_date),
-				weeksCount = due.day(0).diff(start.day(0), 'weeks')+1;
-
-		//loop through week duration of assignment
-		for (var i = 0; i < weeksCount; i++) {
-			var m = start.clone().day(0).add(i,'weeks');
-			// create weekly key if it doesn't exist
-			var weekly_hours = user_assignments[assignee_id].weekly_hours[m.week()];
-			if(!weekly_hours) {
-				weekly_hours = user_assignments[assignee_id].weekly_hours[m.week()] = {
-					hours: 0
-				};
-			}
-			// sum hours (split by duration if needed)
-			weekly_hours.hours += (assig_hours / weeksCount);
-			// attach split duration to assigment
-			user_assignments[assignee_id].workspaces[workspace_id].assignments[story_id].weekly_hours[m.week()] = (assig_hours / weeksCount);
+		//assignment level weekly hour sum
+		var weekNumber = moment(allocation_day.date).week();
+		if(!user_workspace_assignment.weekly_hours[weekNumber]){
+			user_workspace_assignment.weekly_hours[weekNumber] = {
+				hours : 0
+			};
 		}
-
+		user_workspace_assignment.weekly_hours[weekNumber].hours += hours;
+		
+		//user level weekly hour sum
+		if(!user_assignments[assignee_id].weekly_hours[weekNumber]){
+			user_assignments[assignee_id].weekly_hours[weekNumber] = {
+				hours : 0
+			};
+		}
+		user_assignments[assignee_id].weekly_hours[weekNumber].hours += hours;
+		
 	});
 }
 
 function buildView() {
-	var futureWeekCount = 12,
-			resultHTML = '';
+	var resultHTML = '';
 
 	function utilizationClass(hours){
 		return (hours < 38 ? 'under-utilized' : (hours > 42 ? 'over-utilized' : 'utilized') );
@@ -115,11 +104,12 @@ function buildView() {
 			//one row per assigment
 			var assignmentRows = '';
 			$.each( workspace.assignments, function(assig_key, assig){
+
 				var assignmentHoursCells = '';
 				//one cell per week
 				for (var i = 0; i < futureWeekCount; i++) {
 					var m = currentMoment.clone().day(0).add(i,'weeks');
-					var roundedHours = assig.weekly_hours[m.week()] ? Math.round(assig.weekly_hours[ m.week() ]*10)/10 : 0;
+					var roundedHours = assig.weekly_hours[m.week()] ? assig.weekly_hours[m.week()].hours : 0;
 					assignmentHoursCells += '<td>' + roundedHours + '</td>';
 				}
 
@@ -164,7 +154,6 @@ function buildView() {
 
 function fetchData(){
 	var workspacesComplete = false;
-
 	function fetchWorkspaces(page){
 		page = page || 1;
 		$.getJSON(
@@ -181,31 +170,51 @@ function fetchData(){
 		);
 	}
 
-	var assignmentsComplete = false;
-	function fetchAssignments(page){
+	var usersComplete = false;
+	function fetchUsers(page){
 		page = page || 1;
 		$.getJSON(
-			//need to figure out how to start with current week and potentially, limit to a # of weeks in future. 
-			//Right now it just gets everything except archived projects
-			'https://app.mavenlink.com/api/v1/assignments.json?include=story,assignee&current=true&per_page=200&page='+page,
+			'https://app.mavenlink.com/api/v1/users.json?&per_page=200&page='+page,
 			function(json) {
 				$.extend(Users, json.users);
+				if(json.count && json.count > page * 200){
+					fetchUsers(page+1);
+				} else {
+					usersComplete = true;
+					initView();
+				}
+			}
+		);
+	}
+
+	var allocationDaysComplete = false;
+	function fetchAllocationDays(page, dateBetween){
+		page = page || 1;
+		dateBetween = dateBetween || currentMoment.day(0).format('YYYY-MM-DD') + ':' +
+			currentMoment.clone().day(6).add(futureWeekCount,'weeks').format('YYYY-MM-DD');
+		
+		$.getJSON(
+			//#TODO date_between- Requires a colon separated pair of dates in YYYY-MM-DD format. Results are inclusive of the endpoints. If a date is not passed in, it is interpreted as negative or positive infinity
+			'https://app.mavenlink.com/api/v1/story_allocation_days.json?'+
+				'include=story,assignment&current=true&per_page=200&page='+page + '&date_between=' + dateBetween,
+			function(json) {
 				$.extend(Stories, json.stories);
 				$.extend(Assignments, json.assignments);
+				$.extend(AllocationDays, json.story_allocation_days);
 				if(json.count && json.count > page * 200){
-					fetchAssignments(page+1);
+					fetchAllocationDays(page+1, dateBetween);
 				} else {
-					build_user_assignments();
-					assignmentsComplete = true;
+					allocationDaysComplete = true;
 					initView();
-					//console.log(user_assignments);
 				}
 			}
 		);
 	}
 
 	function initView(){
-		if(assignmentsComplete && workspacesComplete){
+		if(allocationDaysComplete && usersComplete && workspacesComplete){
+			build_user_assignments();
+			//console.log(user_assignments);
 			buildView();
 
 			$('tr.user-row .trigger').on('click', function(){
@@ -235,8 +244,9 @@ function fetchData(){
 		}
 	}
 
+	fetchUsers();
 	fetchWorkspaces();
-	fetchAssignments();
+	fetchAllocationDays();
 }
 
 $('.navigation .left-nav-footer').append(
