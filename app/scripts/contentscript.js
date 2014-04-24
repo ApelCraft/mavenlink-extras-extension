@@ -9,7 +9,7 @@ var Users = {},
 		currentMoment = moment(),
 		futureWeekCount = 12;
 
-// create user_assignments map 
+// create user_assignments map
 function build_user_assignments(){
 	$.each( AllocationDays, function(alloc_day_key, allocation_day){
 		var story_id = parseInt(allocation_day.story_id,10),
@@ -39,7 +39,7 @@ function build_user_assignments(){
 				assignments : {}
 			};
 		}
-		
+
 		// fill up the user_assignments.workspaces.assigments map
 		var user_workspace_assignment = user_assignments[assignee_id].workspaces[workspace_id].assignments[story_id];
 		if( !user_workspace_assignment ){
@@ -51,7 +51,7 @@ function build_user_assignments(){
 				title: story.title
 			};
 		}
-		
+
 		//assignment level weekly hour sum
 		var weekNumber = moment(allocation_day.date).week();
 		if(!user_workspace_assignment.weekly_hours[weekNumber]){
@@ -60,7 +60,7 @@ function build_user_assignments(){
 			};
 		}
 		user_workspace_assignment.weekly_hours[weekNumber].hours += hours;
-		
+
 		//user level weekly hour sum
 		if(!user_assignments[assignee_id].weekly_hours[weekNumber]){
 			user_assignments[assignee_id].weekly_hours[weekNumber] = {
@@ -68,7 +68,7 @@ function build_user_assignments(){
 			};
 		}
 		user_assignments[assignee_id].weekly_hours[weekNumber].hours += hours;
-		
+
 	});
 }
 
@@ -82,7 +82,7 @@ function buildView() {
 	resultHTML += '<tr><th>People</th>';
 	for (var i = 0; i < futureWeekCount; i++) {
 		var m = currentMoment.clone().add(i,'weeks');
-		resultHTML += '<th>WK-' + m.week() + ' ' + m.day(0).format('MM/DD') + '</th>';
+		resultHTML += '<th>WK-' + m.week() + '<br>' + m.day(0).format('MM/DD') + '</th>';
 	}
 	resultHTML += '</tr>';
 
@@ -96,11 +96,11 @@ function buildView() {
 			hourSumCells += '<td><div class="'+ utilizationClass(roundedHours) +'">' + roundedHours + '</td>';
 		}
 
-		
+
 		//one row per workspace
 		var workspaceRows = '';
 		$.each( ua.workspaces, function(workspace_key, workspace){
-			
+
 			//one row per assigment
 			var assignmentRows = '';
 			$.each( workspace.assignments, function(assig_key, assig){
@@ -123,7 +123,7 @@ function buildView() {
 			workspaceRows +=
 				'<tr class="workspace-row '+ua_key+'">' +
 					'<td class="trigger" data-workspaceid="'+workspace_key+'">' + Workspaces[workspace_key].title + '<div class="triangle"></div></td>' +
-					'<td colspan="'+(futureWeekCount-1)+'"></td>' +
+					'<td colspan="'+ futureWeekCount +'"></td>' +
 				'</tr>' +
 				assignmentRows;
 
@@ -139,7 +139,7 @@ function buildView() {
 			'</tbody>';
 	});
 
-	
+
 	$('body').append(
 		'<div class="me__resource">'+
 			'<div class="me__resource-wrap">'+
@@ -192,7 +192,7 @@ function fetchData(){
 		page = page || 1;
 		dateBetween = dateBetween || currentMoment.day(0).format('YYYY-MM-DD') + ':' +
 			currentMoment.clone().day(6).add(futureWeekCount,'weeks').format('YYYY-MM-DD');
-		
+
 		$.getJSON(
 			//#TODO date_between- Requires a colon separated pair of dates in YYYY-MM-DD format. Results are inclusive of the endpoints. If a date is not passed in, it is interpreted as negative or positive infinity
 			'https://app.mavenlink.com/api/v1/story_allocation_days.json?'+
