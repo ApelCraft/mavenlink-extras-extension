@@ -1,6 +1,6 @@
 {
     "name": "Mavenlink Extras",
-    "version": "0.0.15",
+    "version": "0.0.17",
     "manifest_version": 2,
     "description": "Adds a 12-week resource planning view to your Mavenlink Dashboard",
     "icons": {
@@ -42,5 +42,6 @@
     ],
     "web_accessible_resources": [
         "bower_components/jquery/dist/jquery.min.map"
-    ]
+    ],
+    "homepage_url": "http://www.fellswoop.com/"
 }
