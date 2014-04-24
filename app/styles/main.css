@@ -8,10 +8,12 @@
 .me__resource-wrap {
 	border: 1px solid #666;
 	padding: 10px 20px 20px 20px;
-	width: 90%;
+	width: calc(100% - 185px);
 	background-color: white;
-	margin: 0 auto;
+	float:right;
+	margin-right: 10px;
 	text-align: left;
+	box-sizing: border-box;
 }
 .me__resource-wrap .close {
 	font-size: 200%;
@@ -29,43 +31,70 @@
 .me__resource-table th {
 	text-align: center;
 	white-space: nowrap;
+	font-weight: bold;
 }
+
+.me__resource-table td {
+	font-weight: bold;
+	text-align: right;
+	width: calc(80%/12);
+	height: auto;
+}
+
+
 .me__resource-table td .under-utilized {
-	background-color: yellow;
+	background-color: #b2e5e2;
+	padding:.25em 1em;
 }
+
 .me__resource-table td .over-utilized {
-	background-color: red;
+	background-color: #e96c52;
+	padding:.25em 1em;
 }
 .me__resource-table td .utilized {
-	background-color: green;
+	background-color: #91c586;
+	padding:.25em 1em;
 }
+
 .me__resource-table .user-row {
 	background-color: #eee;
 }
 .me__resource-table .user-row td:first-child{
 	font-weight: bold;
+	width:20%;
 }
 .me__resource-table .workspace-row td:first-child{
 	font-weight: bold;
-	padding-left: 20px;
+	padding-left: 10px;
+	width:20%;
 }
 .me__resource-table .assignment-row td:first-child{
-	padding-left: 40px;
+	padding-left: 20px;
+	width:20%;
 }
 .me__resource-table .assignment-row, .me__resource-table .workspace-row {
 	display: none;
 }
+
+.me__resource-table .assignment-row td, .me__resource-table .workspace-row td {
+	border-bottom: 1px solid #eee;
+	border-right: 1px solid #eee;
+}
+
+
 .me__resource-table .trigger {
 	cursor: pointer;
+	position:relative;
 }
 .me__resource-table .triangle {
 	width: 0;
 	height:0;
-	float: left;
-	margin: 5px 5px 0 5px;
+	top: calc(50% - 10px);
+	left: 10px;
 	border-left: 5px solid #a9a9a9;
 	border-top: 5px solid transparent;
 	border-bottom: 5px solid transparent;
+	position:absolute;
 }
 .me__resource-table .open .triangle {
 	border-top: none;

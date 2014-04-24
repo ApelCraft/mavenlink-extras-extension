@@ -1,6 +1,6 @@
 {
     "name": "Mavenlink Extras",
-    "version": "0.0.14",
+    "version": "0.0.15",
     "manifest_version": 2,
     "description": "Adds a 12-week resource planning view to your Mavenlink Dashboard",
     "icons": {
